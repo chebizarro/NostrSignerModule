@@ -15,10 +15,15 @@ import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 
+import biz.nostr.android.nip55.Signer;
+import biz.nostr.android.nip55.IntentBuilder;
+import biz.nostr.android.nip55.AppInfo;
+
 public class NostrSignerModule extends ReactContextBaseJavaModule implements ActivityEventListener {
 
 	private static final int REQUEST_GET_PUBLIC_KEY = 1001;
 	private static final int REQUEST_SIGN_EVENT = 1002;
+	private static final int REQUEST_NIP04_ENCRYPT = 1003;
 	private Promise pendingPromise;
 	private int pendingRequestCode;
 
@@ -73,17 +78,57 @@ public class NostrSignerModule extends ReactContextBaseJavaModule implements Act
 		if (currentActivity == null) {
 			promise.reject("NO_ACTIVITY", "Activity doesn't exist");
 			return;
+		} else if (packageName == null || packageName.isEmpty()) {
+			promise.reject("ERROR", "Signer package name not set. Call setPackageName first.");
+			return;
 		}
+		String[] signedEventJson = Signer.signEvent(context, packageName, eventJson, npub);
+		if (signedEventJson != null) {
+			WritableMap map = Arguments.createMap();
+			map.putString("signature", signedEventJson[0]);
+			map.putString("id", eventId);
+			map.putString("event", signedEventJson[1]);
+			promise.resolve(map);
+		} else {
+			Intent intent = IntentBuilder.signEventIntent(packageName, eventJson, eventId, npub);
+			pendingPromise = promise;
+			pendingRequestCode = REQUEST_SIGN_EVENT;
+			try {
+				currentActivity.startActivityForResult(intent, REQUEST_SIGN_EVENT);
+			} catch (Exception e) {
+				pendingPromise = null;
+				promise.reject("ERROR", "Failed to start activity: " + e.getMessage());
+			}
+		}
+	}
 
-		Intent intent = IntentBuilder.signEventIntent(packageName, eventJson, eventId, npub);
-		pendingPromise = promise;
-		pendingRequestCode = REQUEST_SIGN_EVENT;
+	@ReactMethod
+	public void nip04Encrypt(String packageName, String plainText, String id, String pubKey, String npub, Promise promise) {
+		Activity currentActivity = getCurrentActivity();
+		if (currentActivity == null) {
+			promise.reject("NO_ACTIVITY", "Activity doesn't exist");
+			return;
+		} else if (plainText == null || pubKey == null || npub == null) {
+			promise.reject("ERROR", "Missing parameters");
+			return;
+		}
+		String encryptedText = Signer.nip04Encrypt(context, packageName, plainText, pubKey, npub);
+		if (encryptedText != null) {
+			WritableMap map = Arguments.createMap();
+			map.putString("result", encryptedText);
+			map.putString("id", id);
+			promise.resolve(map);
+		} else {
+			Intent intent = IntentBuilder.nip04EncryptIntent(packageName, plainText, id, npub, pubKey);
+			pendingPromise = promise;
+			pendingRequestCode = REQUEST_SIGN_EVENT;
 
-		try {
-			currentActivity.startActivityForResult(intent, REQUEST_SIGN_EVENT);
-		} catch (Exception e) {
-			pendingPromise = null;
-			promise.reject("ERROR", "Failed to start activity: " + e.getMessage());
+			try {
+				currentActivity.startActivityForResult(intent, REQUEST_SIGN_EVENT);
+			} catch (Exception e) {
+				pendingPromise = null;
+				promise.reject("ERROR", "Failed to start activity: " + e.getMessage());
+			}
 		}
 	}
 
@@ -116,6 +161,8 @@ public class NostrSignerModule extends ReactContextBaseJavaModule implements Act
 				} else {
 					pendingPromise.reject("ERROR", "Failed to parse sign event result");
 				}
+			} else if (requestCode == REQUEST_NIP04_ENCRYPT) {
+				
 			}
 		} else {
 			pendingPromise.reject("ERROR", "Operation canceled or failed");
