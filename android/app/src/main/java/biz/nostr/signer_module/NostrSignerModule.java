@@ -24,6 +24,9 @@ public class NostrSignerModule extends ReactContextBaseJavaModule implements Act
 	private static final int REQUEST_GET_PUBLIC_KEY = 1001;
 	private static final int REQUEST_SIGN_EVENT = 1002;
 	private static final int REQUEST_NIP04_ENCRYPT = 1003;
+	private static final int REQUEST_NIP04_DECRYPT = 1004;
+	private static final int REQUEST_NIP44_ENCRYPT = 1005;
+	private static final int REQUEST_NIP44_DECRYPT = 1006;
 	private Promise pendingPromise;
 	private int pendingRequestCode;
 
@@ -121,16 +124,47 @@ public class NostrSignerModule extends ReactContextBaseJavaModule implements Act
 		} else {
 			Intent intent = IntentBuilder.nip04EncryptIntent(packageName, plainText, id, npub, pubKey);
 			pendingPromise = promise;
-			pendingRequestCode = REQUEST_SIGN_EVENT;
+			pendingRequestCode = REQUEST_NIP04_ENCRYPT;
 
 			try {
-				currentActivity.startActivityForResult(intent, REQUEST_SIGN_EVENT);
+				currentActivity.startActivityForResult(intent, REQUEST_NIP04_ENCRYPT);
 			} catch (Exception e) {
 				pendingPromise = null;
 				promise.reject("ERROR", "Failed to start activity: " + e.getMessage());
 			}
 		}
 	}
+
+	@ReactMethod
+	public void nip44Encrypt(String packageName, String plainText, String id, String pubKey, String npub, Promise promise) {
+		Activity currentActivity = getCurrentActivity();
+		if (currentActivity == null) {
+			promise.reject("NO_ACTIVITY", "Activity doesn't exist");
+			return;
+		} else if (plainText == null || pubKey == null || npub == null) {
+			promise.reject("ERROR", "Missing parameters");
+			return;
+		}
+		String encryptedText = Signer.nip44Encrypt(context, packageName, plainText, pubKey, npub);
+		if (encryptedText != null) {
+			WritableMap map = Arguments.createMap();
+			map.putString("result", encryptedText);
+			map.putString("id", id);
+			promise.resolve(map);
+		} else {
+			Intent intent = IntentBuilder.nip44EncryptIntent(packageName, plainText, id, npub, pubKey);
+			pendingPromise = promise;
+			pendingRequestCode = REQUEST_NIP44_ENCRYPT;
+
+			try {
+				currentActivity.startActivityForResult(intent, REQUEST_NIP44_ENCRYPT);
+			} catch (Exception e) {
+				pendingPromise = null;
+				promise.reject("ERROR", "Failed to start activity: " + e.getMessage());
+			}
+		}
+	}
+
 
 	// Implement the ActivityEventListener methods
 	@Override
