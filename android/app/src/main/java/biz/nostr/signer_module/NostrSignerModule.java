@@ -136,6 +136,36 @@ public class NostrSignerModule extends ReactContextBaseJavaModule implements Act
 	}
 
 	@ReactMethod
+	public void nip04Decrypt(String packageName, String encryptedText, String id, String pubKey, String npub, Promise promise) {
+		Activity currentActivity = getCurrentActivity();
+		if (currentActivity == null) {
+			promise.reject("NO_ACTIVITY", "Activity doesn't exist");
+			return;
+		} else if (encryptedText == null || pubKey == null || npub == null) {
+			promise.reject("ERROR", "Missing parameters");
+			return;
+		}
+		String decryptedText = Signer.nip04Decrypt(context, packageName, encryptedText, pubKey, npub);
+		if (decryptedText != null) {
+			WritableMap map = Arguments.createMap();
+			map.putString("result", decryptedText);
+			map.putString("id", id);
+			promise.resolve(map);
+		} else {
+			Intent intent = IntentBuilder.nip04EncryptIntent(packageName, encryptedText, id, npub, pubKey);
+			pendingPromise = promise;
+			pendingRequestCode = REQUEST_NIP04_DECRYPT;
+
+			try {
+				currentActivity.startActivityForResult(intent, REQUEST_NIP04_DECRYPT);
+			} catch (Exception e) {
+				pendingPromise = null;
+				promise.reject("ERROR", "Failed to start activity: " + e.getMessage());
+			}
+		}
+	}
+
+	@ReactMethod
 	public void nip44Encrypt(String packageName, String plainText, String id, String pubKey, String npub, Promise promise) {
 		Activity currentActivity = getCurrentActivity();
 		if (currentActivity == null) {
@@ -165,6 +195,35 @@ public class NostrSignerModule extends ReactContextBaseJavaModule implements Act
 		}
 	}
 
+	@ReactMethod
+	public void nip44Decrypt(String packageName, String encryptedText, String id, String pubKey, String npub, Promise promise) {
+		Activity currentActivity = getCurrentActivity();
+		if (currentActivity == null) {
+			promise.reject("NO_ACTIVITY", "Activity doesn't exist");
+			return;
+		} else if (encryptedText == null || pubKey == null || npub == null) {
+			promise.reject("ERROR", "Missing parameters");
+			return;
+		}
+		String decryptedText = Signer.nip44Decrypt(context, packageName, encryptedText, pubKey, npub);
+		if (decryptedText != null) {
+			WritableMap map = Arguments.createMap();
+			map.putString("result", decryptedText);
+			map.putString("id", id);
+			promise.resolve(map);
+		} else {
+			Intent intent = IntentBuilder.nip44EncryptIntent(packageName, encryptedText, id, npub, pubKey);
+			pendingPromise = promise;
+			pendingRequestCode = REQUEST_NIP44_DECRYPT;
+
+			try {
+				currentActivity.startActivityForResult(intent, REQUEST_NIP44_DECRYPT);
+			} catch (Exception e) {
+				pendingPromise = null;
+				promise.reject("ERROR", "Failed to start activity: " + e.getMessage());
+			}
+		}
+	}
 
 	// Implement the ActivityEventListener methods
 	@Override
