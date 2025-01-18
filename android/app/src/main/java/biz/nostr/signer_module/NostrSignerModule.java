@@ -79,41 +79,7 @@ public class NostrSignerModule extends ReactContextBaseJavaModule implements Act
 	}
 
 	/**
-	 * Returns a list of installed signer apps using the
-	 * Signer.getInstalledSignerApps logic.
-	 */
-	@ReactMethod
-	public void getInstalledSignerApps(Promise promise) {
-		List<AppInfo> signerAppInfos = Signer.getInstalledSignerApps(reactContext);
-		List<Map<String, Object>> appsList = new ArrayList<>();
-
-		for (AppInfo signerAppInfo : signerAppInfos) {
-			Map<String, Object> appInfo = new HashMap<>();
-			appInfo.put("name", signerAppInfo.name);
-			appInfo.put("packageName", signerAppInfo.packageName);
-			appInfo.put("iconData", signerAppInfo.iconData);
-			appInfo.put("iconUrl", signerAppInfo.iconUrl);
-			appsList.add(appInfo);
-		}
-
-		promise.resolve(appsList);
-	}
-
-	/**
 	 * Sets the default package name for the signer application.
-	 */
-	@ReactMethod
-	public void setPackageName(String packageName, Promise promise) {
-		if (packageName == null || packageName.isEmpty()) {
-			promise.reject("ERROR", "Missing or empty packageName parameter");
-			return;
-		}
-		signerPackageName = packageName;
-		promise.resolve(null);
-	}
-
-	/**
-	 * Sets the package name for the signer application to be used by default.
 	 */
 	@ReactMethod
 	public void setPackageName(String packageName, Promise promise) {
