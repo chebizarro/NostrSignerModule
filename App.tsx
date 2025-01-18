@@ -14,7 +14,7 @@ function App(): React.JSX.Element {
   const [publicKey, setPublicKey] = useState<string>('');
   const [signature, setSignature] = useState<string>('');
 
-  const packageName = 'com.example.signerapp'; // Replace with actual signer app package name
+  const packageName = 'com.example.signerapp';
 
   const getPublicKey = async () => {
     try {
